@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block style %}
+#summary-bar {
+  font-size: 1.1rem;
+  background: #f0f0f0;
+  padding: 10px 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.summary-section .card {
+    height: 100%;
+}
+  
+.summary-section .card-header {
+font-size: 1.1rem;
+font-weight: 600;
+}
+
+#summary-3dviewer {
+    position: relative;   /* canvas가 튀어나오지 않도록 */
+    z-index: 0;           /* 헤더보다 아래로 */
+    height: 400px;
+    width: 100%;
+    overflow: hidden;     /* 혹시라도 canvas가 넘치면 숨기기 */
+}
+
+.card-body {
+    position: relative;   /* 내부 요소 정렬 안정화 */
+}
+{% endblock %}
+{% block content %}
+
+<div class="container mt-5">
+  <h2 class="text-primary mb-4">🧬 Proteinmpnn 3D Virtual Results</h2>
+
+  <!-- ✅ summary-section row: 가로로 나란히 -->
+  <div class="summary-section row mb-5">
+  
+    <!-- 🔹 왼쪽: 3D 뷰어 (8/12 너비) -->
+    <div class="col-md-8">
+      <div class="card shadow-sm mb-4">
+        <div class="card-header bg-light">
+          <button class="btn btn-sm btn-outline-dark" data-pose="origin" onclick="togglePose(this)">origin PDB</button>
+          <button class="btn btn-sm btn-outline-dark" data-pose="input" onclick="togglePose(this)">Input boltz2</button>
+          <button class="btn btn-sm btn-outline-dark" data-pose="temp" onclick="togglePose(this)">Temp boltz2</button>
+          <button class="btn btn-sm btn-outline-dark" onclick="setStyleCartoon()">White</button>
+          <button class="btn btn-sm btn-outline-dark" onclick="setStyleStick()">Stick</button>
+          <button class="btn btn-sm btn-outline-dark" onclick="resetStyleCartoon()">Cartoon</button>
+          <button class="btn btn-sm btn-outline-dark" onclick="toggleSpin()">Spin</button>
+          <button class="btn btn-sm btn-outline-dark" onclick="resetZoom()">Reset Zoom</button>
+        </div>
+        <div class="card-body p-0">
+          <div id="viewer" style="width: 100%; height: 700px;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 🔹 오른쪽: FASTA (4/12 너비) -->
+    <div class="col-md-4" style="height: 700px; display: flex; flex-direction: column; gap: 10px;">
+      <div class="card shadow-sm" style="flex: 1; overflow: hidden;">
+        <div class="card-header bg-light">
+          <strong>📄 Input FASTA Sequence</strong>
+        </div>
+        <div class="card-body">
+          <pre style="white-space: pre-wrap; font-family: monospace; height: 100%; overflow-y: auto;">
+            {{ input_fa }}
+          </pre>
+        </div>
+      </div>
+
+      <div class="card shadow-sm" style="flex: 1;">
+        <div class="card-header bg-light">
+          <strong>🧬 Predicted FASTA Sequence</strong>
+        </div>
+        <div class="card-body">
+          <pre style="white-space: pre-wrap; font-family: monospace; height: 100%; overflow-y: auto;">
+            {{ temp_fa }}
+          </pre>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<script>
+  const viewer = $3Dmol.createViewer("viewer", { backgroundColor: "white" });
+
+  // 🔥 Django 템플릿에서 input_pdb와 pred_pdb를 각각 받기
+  const pdbModels = {
+    origin: `{{ origin_pdb|safe }}`,
+    input: `{{ input_pdb|safe }}`,
+    temp: `{{ temp_pdb|safe }}`,
+  };
+
+  const poseColors = {
+    origin: "white",
+    input: "green",
+    temp: "red",
+  };
+
+  function togglePose(button) {
+    // 토글 active 클래스
+    button.classList.toggle("active");
+    button.classList.toggle("btn-outline-primary");
+    button.classList.toggle("btn-primary");
+    
+    loadSelectedPoses();
+  }
+
+  function loadSelectedPoses() {
+    viewer.removeAllModels();
+  
+    const activeButtons = document.querySelectorAll('[data-pose].active');
+  
+    activeButtons.forEach(btn => {
+      const pose = btn.getAttribute("data-pose");
+      const model = viewer.addModel(pdbModels[pose], "pdb");
+      model.setStyle({ cartoon: { color: poseColors[pose] } });
+    });
+  
+    viewer.zoomTo();
+    viewer.render();
+  }
+  
+  // 페이지 로드시 OpenFold만 기본 선택
+  document.addEventListener("DOMContentLoaded", () => {
+    const defaultBtn = document.querySelector('[data-pose="origin"]');
+    defaultBtn.classList.add("active", "btn-primary");
+    defaultBtn.classList.remove("btn-outline-primary");
+    loadSelectedPoses();
+  });
+
+  function setStyleCartoon() {
+    viewer.setStyle({}, { cartoon: { color: "white" } });
+    viewer.render();
+  }
+
+  function resetStyleCartoon() {
+    viewer.setStyle({}, { cartoon: { color: "spectrum" } });
+    viewer.render();
+  }
+
+  function setStyleStick() {
+    viewer.setStyle({}, { stick: { radius: 0.3 } });
+    viewer.render();
+  }
+
+  let isSpinning = false;
+  function toggleSpin() {
+    isSpinning = !isSpinning;
+    viewer.spin(isSpinning);  // ← 이것만 사용!
+  }
+
+  function resetZoom() {
+    viewer.removeAllModels();
+
+    const activeButtons = document.querySelectorAll('[data-pose].active');
+
+    activeButtons.forEach(btn => {
+      const pose = btn.getAttribute("data-pose");
+      const model = viewer.addModel(pdbModels[pose], "pdb");
+      model.setStyle({ cartoon: { color: poseColors[pose] } });  // 🎨 색상 재적용
+    });
+
+    viewer.zoomTo();
+    viewer.render();
+  }
+</script>
+
+{% endblock %}

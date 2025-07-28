@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div style="margin-top: 4rem;"></div>
+    <h2 class="mb-4 text-primary">Boltz</h2>
+    <form id="foldForm" class="needs-validation" novalidate>
+
+        <div class="card mb-4 shadow-sm">
+            <div class="form-label card-header text-white" style="background-color: rgb(149, 189, 69);">
+                Input setting
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">
+                      Sequence 입력
+                    </label>
+                  
+                    <select class="form-select mb-2 text-center" id="protein_sample" onchange="setSampleValue()">
+                        <option value="">-- Select Sample Molecules --</option>
+                    </select>
+                    
+                    <!-- 여기에 동적으로 textarea 추가됨 -->
+                    <div id="sequence_container"></div>
+                    <input type="hidden" id="sample_name" name="sample_name">
+
+                </div>
+                <div class="mb-3">
+                    <div class="mb-3">
+                        <label class="form-label">Recycling steps : <span id="recycling_stepsValue">3</span></label>
+                        <input type="range" class="form-range" id="recycling_steps" min="1" max="10" value="3" oninput="recycling_stepsValue.textContent = this.value">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Sampling steps : <span id="sampling_stepsValue">200</span></label>
+                        <input type="range" class="form-range" id="sampling_steps" min="100" max="300" value="200" step="20" oninput="sampling_stepsValue.textContent = this.value">
+                    </div>
+            
+                    <div class="mb-3">
+                        <label class="form-label">Num samples : <span id="num_workersValue">4</span></label>
+                        <input type="range" class="form-range" id="num_workers" min="1" max="10" value="4" oninput="num_workersValue.textContent = this.value">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mb-5">
+            <button type="submit" class="btn btn-primary me-2 px-4">Generate Protein</button>
+            <button type="reset" class="btn btn-outline-secondary px-4">Reset</button>
+        </div>
+    </form>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000;">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 20px; font-weight: bold;">
+        Loading, please wait...
+    </div>
+</div>
+
+<script>
+    // CSRF 토큰 가져오기 함수 (Django에서 사용)
+    function getCSRFToken() {
+        const csrfCookie = document.cookie
+            .split("; ")
+            .find(row => row.startsWith("csrftoken="));
+        return csrfCookie ? csrfCookie.split("=")[1] : "";
+    }
+    const csrfToken = getCSRFToken();
+
+    const samples = {{ samples_json|safe }};
+    // 셀렉트 박스 옵션 추가
+    const select = document.getElementById("protein_sample");
+    samples.forEach((sample, idx) => {
+        const option = document.createElement("option");
+        option.value = idx;
+        option.textContent = sample.name;
+        select.appendChild(option);
+    });
+
+    // 샘플 선택 시 호출
+    function setSampleValue() {
+        const idx = select.value;
+        const container = document.getElementById("sequence_container");
+        container.innerHTML = "";  // 기존 textarea 비우기
+
+        if (idx !== "") {
+            const sample = samples[idx];
+
+            // 샘플 이름 설정
+            document.getElementById("sample_name").value = sample.name;
+
+            // 시퀀스 수만큼 textarea 생성
+            sample.seqs.forEach((seq, i) => {
+                const label = document.createElement("label");
+                label.textContent = `Sequence ${i + 1}`;
+                label.className = "form-label mt-2";
+
+                const textarea = document.createElement("textarea");
+                textarea.className = "form-control mb-2";
+                textarea.rows = 5;
+                textarea.name = `sequence_${i+1}`;  // name은 서버로 넘길 때 유용
+                textarea.value = seq;
+                textarea.readOnly = true;
+
+                container.appendChild(label);
+                container.appendChild(textarea);
+            });
+        } else {
+            document.getElementById("sample_name").value = "";
+        }
+    }
+
+    // Function to adjust input field based on selection
+    function adjustInputField(selectElement) {
+        const inputField = selectElement.closest(".entity-card").querySelector(".input-sequence");
+        const textarea = document.createElement("textarea");
+        textarea.className = "form-control input-sequence";
+        textarea.rows = 3;
+        textarea.placeholder = "Paste Sequence or FASTA";
+        inputField.replaceWith(textarea);
+    }
+
+    document.getElementById('foldForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const select = document.getElementById('protein_sample');
+        const selectedName = select.options[select.selectedIndex].text;  // 👉 사용자 눈에 보이는 이름
+
+        const data = {
+            sampleName: selectedName
+        };
+
+        showLoading(true);
+
+        axios.post('{% url 'protein:boltz2MultiProcess' %}', data, {
+            headers: {
+                "X-CSRFToken": csrfToken,
+                "Content-Type": "application/json"
+            },
+            withCredentials: true
+        }).then(response => {
+            showLoading(false);
+            if (response.data.status === "done") {
+                const results_dir = encodeURIComponent(response.data.results_dir);
+                location.href = `{% url 'protein:boltz2OutputListPage' %}?results_dir=${results_dir}&source=multi`;
+            }
+        }).catch(error => {
+            alert("Error occurred.");
+            showLoading(false);
+            console.error(error);
+        });
+    });
+
+    // 로딩 메시지 표시/숨기기 함수
+    function showLoading(isLoading) {
+        const loadingOverlay = document.getElementById('loading-overlay');
+        if (!loadingOverlay) {
+            console.error("Loading overlay element not found!");
+            return;
+        }
+
+        if (isLoading) {
+            loadingOverlay.style.display = 'block'; // 오버레이 표시
+        } else {
+            loadingOverlay.style.display = 'none'; // 오버레이 숨기기
+        }
+    }
+</script>
+{% endblock %}

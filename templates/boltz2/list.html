@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block style %}
+/* 텍스트 그림자 (제목용) */
+.text-shadow {
+    text-shadow: 1px 1px 6px rgba(0, 80, 0, 0.6);
+}
+
+/* 카드 공통 스타일 */
+.card-dark {
+    background-color: #000;
+    border: none;
+    border-radius: 16px;
+    overflow: hidden;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+    height: 280px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+/* 호버 효과 */
+.card-dark:hover {
+    transform: translateY(-6px);
+}
+
+/* 이미지 영역에 여백 + 비율 유지 */
+.card-img-wrapper {
+    height: 100%;
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #000;
+}
+
+.card-img-wrapper img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain; /* 비율 유지 + 여백 포함 */
+}
+
+/* 텍스트 아래 정렬 */
+.card-body {
+    height: 30%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card-title {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color:rgb(247, 247, 247);
+    margin: 0;
+}
+
+/* 애니메이션 */
+@keyframes slideUpFade {
+    0% {
+        opacity: 0;
+        transform: translateY(40px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-slide-up {
+    opacity: 0;
+    animation: slideUpFade 0.8s ease-out forwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.animate-fade-in {
+    animation: fadeIn 1s ease-out;
+}
+
+/* 배경 블러 효과 */
+.backdrop-blur::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    z-index: 0;
+}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <h2 class="text-primary mb-4">🧬 Boltz2 result model list</h2>
+
+        {% if error_message %}
+        <div class="alert alert-danger mt-4" role="alert">
+            {{ error_message }}
+        </div>
+        {% endif %}
+    
+        <div style="margin-top: 0.5rem;"></div>
+
+        <!-- 카드 배치 -->
+        <div class="container py-5">
+            <div class="row g-4 justify-content-center">  <!-- ✅ 1열 고정 -->
+                {% for card in cards %}
+                <div class="col-4">  <!-- ✅ 카드 한 줄 꽉 차게 -->
+                    <div class="card card-dark text-white animate-slide-up"
+                        style="animation-delay: {{ card.delay }}; height: auto;"
+                        onclick="goToPage('{{ card.url }}')">
+
+                        <div class="card-img-wrapper" style="height: 200px;">  <!-- 높이 조정 가능 -->
+                            <img src="{% static card.icon %}" class="card-img-top">
+                        </div>
+
+                        <div class="card-body d-flex align-items-end justify-content-center">
+                            <h5 class="card-title text-center w-100">{{ card.title }}</h5>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // CSRF 토큰 가져오기 함수 (Django에서 사용)
+    function getCSRFToken() {
+        const csrfCookie = document.cookie
+            .split("; ")
+            .find(row => row.startsWith("csrftoken="));
+        return csrfCookie ? csrfCookie.split("=")[1] : "";
+    }
+
+    const csrfToken = getCSRFToken();
+
+    function goToPage(url) {
+        window.location.href = url;
+    }
+</script>
+{% endblock %}

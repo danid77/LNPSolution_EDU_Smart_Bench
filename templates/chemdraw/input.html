@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block style %}
+.smiles-input {
+    width: 100%;
+    height: 120px;
+    padding: 12px;
+    font-size: 16px;
+    border: 2px solid #b3d08c;
+    border-radius: 8px;
+    resize: none;
+    background-color: #f7fbea;
+}
+
+.smiles-input:focus {
+    outline: none;
+    border-color: #86a643;
+    background-color: white;
+}
+{% endblock %}
+
+
+{% block content %}
+<div class="container mt-4">
+    <div style="margin-top: 4rem;"></div>
+    <h2 class="mb-4 text-primary">Chem draw : ketcher</h2>
+
+    <form id="generateMoleculesForm" class="needs-validation" novalidate>
+        <div class="card mb-4 shadow-sm">
+            <div class="card-body">
+
+                <div class="mb-4">
+                <iframe src="{% static 'tools/ketcher_editor/index.html' %}"
+                        id="ketcherFrame"
+                        width="100%"
+                        height="500"
+                        frameborder="0"></iframe>
+                </div>
+
+                <!-- SMILES 입력 -->
+                <div class="mb-3">
+                    <label for="smilesInput" class="form-label">
+                        SMILES 결과
+                    </label>
+                    <textarea id="smilesInput" class="form-control" rows="2"></textarea>
+                </div>
+            </div>
+            <!-- 버튼 -->
+            <div class="text-center mb-5">
+                <button type="submit" class="btn btn-primary me-2 px-4">모델 실행 및 분석</button>
+                <button type="reset" class="btn btn-outline-secondary px-4">Reset</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000;">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 20px; font-weight: bold;">
+        Loading, please wait...
+    </div>
+</div>
+<script>
+// 폼 제출 핸들러 등록
+    document.getElementById("generateMoleculesForm").addEventListener("submit", function (e) {
+        e.preventDefault();  // 기본 제출 막기
+        showLoading(true);   // 로딩 표시
+
+        const smilesInput = document.getElementById('smilesInput');
+
+        const requestData = {
+            smilesInput: smilesInput.value.trim(),  // ✨ value만 추출해서 전달
+        };
+
+        axios.post("{% url 'generatemol:chemDrawProcess' %}", requestData, {
+            headers: {
+                "X-CSRFToken": getCSRFToken(),
+                "Content-Type": "application/json"
+            }
+        })
+        .then(response => {
+            const data = response.data;
+            showLoading(false);
+
+            if (data.status === "success") {
+                console.log("Results:", data.results_dir);
+                // alert(`✅ Job completed successfully!`);
+
+                const results_dir = encodeURIComponent(data.results_dir);
+                window.location.href = `{% url 'generatemol:chemDrawOutputPage' %}?results_dir=${results_dir}`;
+            } else {
+                console.error("Processing Error:", data.message);
+                alert(`❌ Error: ${data.message}`);
+            }
+        })
+        .catch(error => {
+            console.error("Request Error:", error);
+            alert("❌ Error occurred during request.");
+            showLoading(false);
+        });
+    });
+
+    window.addEventListener("message", function (e) {
+        if (e.data?.type === "smiles") {
+        console.log("✅ 받은 SMILES:", e.data.value);
+        document.getElementById("smilesInput").value = e.data.value;
+        }
+    });
+
+    // CSRF 토큰 가져오기 (Django용)
+    function getCSRFToken() {
+        const csrfCookie = document.cookie
+            .split("; ")
+            .find(row => row.startsWith("csrftoken="));
+        return csrfCookie ? csrfCookie.split("=")[1] : "";
+    }
+
+    // 로딩 메시지 표시/숨기기 함수
+    function showLoading(isLoading) {
+        const loadingOverlay = document.getElementById('loading-overlay');
+        if (!loadingOverlay) {
+            console.error("Loading overlay element not found!");
+            return;
+        }
+
+        if (isLoading) {
+            loadingOverlay.style.display = 'block'; // 오버레이 표시
+        } else {
+            loadingOverlay.style.display = 'none'; // 오버레이 숨기기
+        }
+    }
+</script>
+{% endblock %}

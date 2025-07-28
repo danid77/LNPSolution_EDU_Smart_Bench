@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div style="margin-top: 4rem;"></div>
+    <h2 class="mb-4 text-primary">Boltz</h2>
+    <form id="foldForm" class="needs-validation" novalidate>
+
+        <div class="card mb-4 shadow-sm">
+            <div class="form-label card-header text-white" style="background-color: rgb(149, 189, 69);">
+                Input setting
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">
+                      Sequence 입력
+                    </label>
+                  
+                    <div id="entity-container">
+                        <!-- Initial Row -->
+                        <div class="row entity-card">
+                            <div class="col-md-4">
+                                <label class="form-label">Entity Type</label>
+                                <select class="form-select entity-type">
+                                    <option selected>Protein</option>
+                                    <option>Ligand</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Copies</label>
+                                <input type="number" class="form-control copies" value="1" min="1">
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">Paste Sequence or FASTA</label>
+                                <textarea class="form-control input-sequence" rows="3" placeholder="Paste Sequence or FASTA"></textarea>
+                            </div>
+                            <div class="col-md-1 d-flex align-items-center">
+                                <button class="btn btn-danger remove-entity">Remove</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Buttons -->
+                    <div class="d-flex justify-content-between mt-4">
+                        <button id="add-entity" class="btn btn-outline-primary">+ Add Entity</button>
+                    </div>
+
+                </div>
+                <div class="mb-3">
+                    <div class="mb-3">
+                        <label class="form-label">Recycling steps : <span id="recycling_stepsValue">3</span></label>
+                        <input type="range" class="form-range" id="recycling_steps" min="1" max="10" value="3" oninput="recycling_stepsValue.textContent = this.value">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Sampling steps : <span id="sampling_stepsValue">200</span></label>
+                        <input type="range" class="form-range" id="sampling_steps" min="100" max="300" value="200" step="20" oninput="sampling_stepsValue.textContent = this.value">
+                    </div>
+            
+                    <div class="mb-3">
+                        <label class="form-label">Num samples : <span id="num_workersValue">4</span></label>
+                        <input type="range" class="form-range" id="num_workers" min="1" max="10" value="4" oninput="num_workersValue.textContent = this.value">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center mb-5">
+            <button type="submit" class="btn btn-primary me-2 px-4">Generate Protein</button>
+            <button type="reset" class="btn btn-outline-secondary px-4">Reset</button>
+        </div>
+    </form>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000;">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 20px; font-weight: bold;">
+        Loading, please wait...
+    </div>
+</div>
+
+<script>
+    // CSRF 토큰 가져오기 함수 (Django에서 사용)
+    function getCSRFToken() {
+        const csrfCookie = document.cookie
+            .split("; ")
+            .find(row => row.startsWith("csrftoken="));
+        return csrfCookie ? csrfCookie.split("=")[1] : "";
+    }
+
+    // Function to adjust input field based on selection
+    function adjustInputField(selectElement) {
+        const inputField = selectElement.closest(".entity-card").querySelector(".input-sequence");
+        if (selectElement.value === "Protein") {
+            const textarea = document.createElement("textarea");
+            textarea.className = "form-control input-sequence";
+            textarea.rows = 3;
+            textarea.placeholder = "Paste Sequence or FASTA";
+            inputField.replaceWith(textarea);
+        } else {
+            const input = document.createElement("input");
+            input.type = "text";
+            input.className = "form-control input-sequence";
+            input.placeholder = "Input";
+            inputField.replaceWith(input);
+        }
+    }
+
+    const csrfToken = getCSRFToken();
+    // Django 템플릿 변수 안에 JSON을 넣자
+
+    // Add new entity row dynamically
+    document.getElementById("add-entity").addEventListener("click", () => {
+        const container = document.getElementById("entity-container");
+        const newRow = document.createElement("div");
+        newRow.className = "row entity-card";
+        newRow.innerHTML = `
+            <div class="col-md-4">
+                <label class="form-label">Entity Type</label>
+                <select class="form-select entity-type">
+                    <option selected>Protein</option>
+                    <option>Ligand</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Copies</label>
+                <input type="number" class="form-control copies" value="1" min="1">
+            </div>
+            <div class="col-md-5">
+                <label class="form-label">Paste Sequence or FASTA</label>
+                <textarea class="form-control input-sequence" rows="3" placeholder="Paste Sequence or FASTA"></textarea>
+            </div>
+            <div class="col-md-1 d-flex align-items-center">
+                <button class="btn btn-danger remove-entity">Remove</button>
+            </div>
+        `;
+        container.appendChild(newRow);
+
+        // Trigger adjustment for the newly added select
+        const newSelect = newRow.querySelector(".entity-type");
+        adjustInputField(newSelect);
+
+        // Add change event listener to the new select element
+        newSelect.addEventListener("change", () => adjustInputField(newSelect));
+
+        // Add click event listener for remove button
+        newRow.querySelector(".remove-entity").addEventListener("click", () => {
+            newRow.remove();
+        });
+    });
+
+    // Add remove functionality for the initial row
+    document.querySelectorAll(".remove-entity").forEach(button => {
+        button.addEventListener("click", (event) => {
+            event.target.closest(".entity-card").remove();
+        });
+    });
+
+    // Ensure "Protein" inputs are set to textarea on load
+    document.addEventListener("DOMContentLoaded", () => {
+        document.querySelectorAll(".entity-type").forEach(select => {
+            adjustInputField(select);
+            select.addEventListener("change", () => adjustInputField(select));
+        });
+    });
+
+    document.getElementById('foldForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+    
+        const select = document.getElementById('protein_sample');
+        const selectedName = select.options[select.selectedIndex].text;  // 👉 사용자 눈에 보이는 이름
+        // const selectedSeq = document.getElementById('aminoSeq').value;   // 👉 textarea에 있는 seq
+        
+        // 🔸 새로 추가할 값들
+        const sequence = document.getElementById('fixed_sequence').value;
+        const recyclingSteps = document.getElementById('recycling_steps').value;
+        const samplingSteps = document.getElementById('sampling_steps').value;
+        const numWorkers = document.getElementById('num_workers').value;
+
+        const data = {
+            sampleName: selectedName,
+            sequence: sequence,
+            recycling_steps: recyclingSteps,
+            sampling_steps: samplingSteps,
+            num_samples: numWorkers
+        };
+    
+        showLoading(true);
+    
+        axios.post('{% url 'protein:boltz2Process' %}', data, {
+            headers: {
+                "X-CSRFToken": csrfToken,
+                "Content-Type": "application/json"
+            },
+            withCredentials: true
+        }).then(response => {
+            showLoading(false);
+            console.log(response.data);
+    
+            if (response.data.status === "done") {
+                const results_dir = encodeURIComponent(response.data.results_dir);
+                // const sample_name = encodeURIComponent(response.data.sample_name);
+                // location.href = `{% url 'protein:boltz2OutputPage' %}?results_dir=${results_dir}&sample_name=${sample_name}`;
+                location.href = `{% url 'protein:boltz2OutputListPage' %}?results_dir=${results_dir}`;
+            }
+        }).catch(error => {
+            alert("Error occurred.");
+            showLoading(false);
+            console.error(error);
+        });
+    });
+
+    // 로딩 메시지 표시/숨기기 함수
+    function showLoading(isLoading) {
+        const loadingOverlay = document.getElementById('loading-overlay');
+        if (!loadingOverlay) {
+            console.error("Loading overlay element not found!");
+            return;
+        }
+
+        if (isLoading) {
+            loadingOverlay.style.display = 'block'; // 오버레이 표시
+        } else {
+            loadingOverlay.style.display = 'none'; // 오버레이 숨기기
+        }
+    }
+</script>
+{% endblock %}

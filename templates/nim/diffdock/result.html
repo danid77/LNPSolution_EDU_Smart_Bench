@@ -1,0 +1,320 @@
+{% extends "base.html" %}
+
+{% block style %}
+#sample-list-buttons {
+  display: flex;
+  flex-wrap: wrap;       /* 줄 바꿈 가능 */
+  gap: 10px;              /* 버튼 간격 */
+}
+
+#sample-list-buttons .btn {
+  flex: 1 1 0;
+  min-width: 120px;       /* 버튼 최소 너비 */
+  text-align: center;
+}
+
+{% endblock %}
+
+{% load static %}
+
+{% block content %}
+<div class="container-fluid p-4" style="min-height: 100vh; background-color: #f9f9f9;">
+
+    <div class="summary-section row mb-5">
+
+        <!-- 🔸 3Dmol.js 뷰어 카드 -->
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-light">
+                    <div class="p-1 d-flex flex-wrap gap-3 align-items-center">
+                        <label class="form-label mb-0 me-2"><strong>🧬 3D Protein-Ligand Structure</strong></label>
+              
+                        <div class="ms-auto d-flex gap-2">
+                          <button class="btn btn-sm btn-outline-dark" onclick="setStyleCartoon()">White</button>
+                          <button class="btn btn-sm btn-outline-dark" onclick="setStyleStick()">Stick</button>
+                          <button class="btn btn-sm btn-outline-dark" onclick="resetStyleCartoon()">Cartoon</button>
+                          <button class="btn btn-sm btn-outline-dark" onclick="toggleSpin()">Spin</button>
+                          <button class="btn btn-sm btn-outline-dark" onclick="resetZoom()">Reset Zoom</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <div id="summary-3dviewer" style="height: 400px; width: 100%;"></div>
+                </div>
+            </div>
+        </div>
+        <!-- 🔹 2D 이미지 카드 -->
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-light"><strong>🖼️  Plip : Ligand Image</strong></div>
+                <div class="card-body d-flex justify-content-center align-items-center" style="height: 400px;">
+                    <img id="summary-image" class="img-fluid" style="height: 550px; width: auto;" alt="2D Ligand Image" onclick="openImageModal(this.src)">
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="summary-section row mb-5">
+        <div id="gnina-table-container"></div>
+    </div>
+
+    <div class="summary-section row mb-5">
+        <div class="col-md-12">
+          <div id="interaction-content"></div>
+        </div>
+      </div>
+
+</div>
+
+<!-- 이미지 클릭 시 확대되는 모달 -->
+<div class="modal fade" id="imageModal" tabindex="-1" aria-labelledby="imageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+      <div class="modal-content">
+        <div class="modal-body p-0">
+          <img id="modalImage" src="" class="img-fluid w-100" alt="Expanded View">
+        </div>
+      </div>
+    </div>
+</div>
+
+<!-- SMILES 구조 확대 모달 -->
+<div class="modal fade" id="structureModal" tabindex="-1" aria-labelledby="structureModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content">
+      <div class="modal-body text-center">
+        <canvas id="modalCanvas" width="400" height="400"></canvas>
+        <div id="modalSmiles" class="mt-2"><code></code></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // const sampleList = JSON.parse(`{{ sample_list|safe }}`);
+  // const pdbContent = `{{ result_pdb|escapejs }}`;
+  const resultsDir = "{{ results_dir }}";
+
+  const viewer = $3Dmol.createViewer("summary-3dviewer", { backgroundColor: "white" });
+
+  const pdbStr = `{{ result_pdb|escapejs }}`;  // ← JSON 문자열이니까 그냥 JS 배열로 바로 됨!
+
+    // 🔸 포즈 로드 함수
+  function loadPose(index = null) {
+    viewer.clear();
+    viewer.addModel(pdbStr, "pdb");
+    const model = viewer.getModel();  // 🔹 getModel()은 viewer에서 첫 번째 모델 반환
+  
+    viewer.setStyle({ hetflag: false }, { cartoon: { color: 'white' } });  // 단백질
+    viewer.setStyle({ hetflag: true }, { stick: { color: 'magenta' }, sphere: { radius: 0.4 } });  // 리간드
+  
+    viewer.zoomTo();
+    viewer.render();
+
+    loadResults(resultsDir);
+  }
+
+  // 🔸 스타일 컨트롤 함수
+  function setStyleCartoon() {
+    viewer.setStyle({}, { cartoon: { color: "white" } });
+    viewer.setStyle({ hetflag: true }, { stick: { color: 'magenta' }, sphere: { radius: 0.4 } });  // 리간드
+    viewer.render();
+  }
+
+  function resetStyleCartoon() {
+    viewer.setStyle({}, { cartoon: { color: "spectrum" } });
+    viewer.setStyle({ hetflag: true }, { stick: { color: 'magenta' }, sphere: { radius: 0.4 } });  // 리간드
+    viewer.render();
+  }
+
+  function setStyleStick() {
+    viewer.setStyle({}, { stick: { radius: 0.3 } });
+    viewer.setStyle({ hetflag: true }, { stick: { color: 'magenta' }, sphere: { radius: 0.4 } });  // 리간드
+    viewer.render();
+  }
+
+  let isSpinning = false;
+  function toggleSpin() {
+    isSpinning = !isSpinning;
+    viewer.spin(isSpinning);  // ← 이것만 사용!
+  }
+
+  function resetZoom() {
+    viewer.setStyle({ hetflag: false }, { cartoon: { color: 'spectrum' } });  // 단백질
+    viewer.setStyle({ hetflag: true }, { stick: { color: 'magenta' }, sphere: { radius: 0.4 } });  // 리간드
+    viewer.zoomTo();
+    viewer.render();
+  }
+
+  // 🔸 첫 번째 포즈 로딩
+  loadPose(0);
+
+  function loadResults(resultsDir) {
+    const relativePath = resultsDir.split("/static/")[1];
+    const imageUrl = `{% url 'visualzing:visualzingPlipResultImages' %}?mainResultsDir=${encodeURIComponent(resultsDir)}`;
+    fetch(imageUrl)
+    .then(res => res.json())
+    .then(data => {
+        if (data.plip_image) {
+            const img = document.getElementById("summary-image");
+            img.src = `/static/${relativePath}/plip/${data.plip_image}`;
+            img.alt = data.plip_image;
+        }
+    });
+
+    // XML 파싱해서 카드 안에 상호작용 표로 넣기
+    fetch(`{% url 'plip:plipResultXml' %}?results_dir=${encodeURIComponent(resultsDir)}/plip`)
+    .then(res => res.json())
+    .then(data => {
+        if (data.sites) {
+            const container = document.getElementById("interaction-content");
+
+            data.sites.forEach(site => {
+                const ligand = site.ligand;
+
+                // ✅ 카드 1: Ligand Info
+                const ligandCard = document.createElement("div");
+                ligandCard.className = "card shadow-sm mb-4";
+                ligandCard.innerHTML = `
+                    <div class="card-header bg-light">
+                        <strong>🧲 Binding Site - Ligand <code>${ligand.longname}</code></strong>
+                    </div>
+                    <div class="card-body">
+                        <ul class="mb-3">
+                            <li><strong>HETID:</strong> ${ligand.hetid}</li>
+                            <li><strong>Chain:</strong> ${ligand.chain}</li>
+                            <li><strong>Position:</strong> ${ligand.position}</li>
+                            <li><strong>SMILES:</strong> <code>${ligand.smiles}</code></li>
+                            <li><strong>InChIKey:</strong> <code>${ligand.inchikey}</code></li>
+                        </ul>
+                    </div>
+                `;
+                container.appendChild(ligandCard);
+
+                // ✅ 카드 2: Hydrogen Bonds
+                if (site.hydrogen_bonds.length > 0) {
+                    const hbondCard = document.createElement("div");
+                    hbondCard.className = "card shadow-sm mb-4";
+
+                    hbondCard.innerHTML = `
+                        <div class="card-header bg-light">
+                            <strong>🔬 Hydrogen Bonds</strong>
+                        </div>
+                        <div class="card-body table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Residue</th>
+                                        <th>Distance D-A</th>
+                                        <th>Angle</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${site.hydrogen_bonds.map(h => `
+                                        <tr>
+                                            <td>${h.restype} ${h.resnr} (${h.reschain})</td>
+                                            <td>${h["dist_d-a"]}</td>
+                                            <td>${h.don_angle}</td>
+                                        </tr>`).join("")}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    container.appendChild(hbondCard);
+                }
+
+                // ✅ 카드 3: Pi Stacks
+                if (site.pi_stacks.length > 0) {
+                    const piCard = document.createElement("div");
+                    piCard.className = "card shadow-sm mb-4";
+
+                    piCard.innerHTML = `
+                        <div class="card-header bg-light">
+                            <strong>🧱 Pi Stacks</strong>
+                        </div>
+                        <div class="card-body table-responsive">
+                            <table class="table table-sm table-bordered">
+                                <thead>
+                                    <tr>
+                                        <th>Residue</th>
+                                        <th>Type</th>
+                                        <th>Distance</th>
+                                        <th>Angle</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${site.pi_stacks.map(p => `
+                                        <tr>
+                                            <td>${p.restype} ${p.resnr} (${p.reschain})</td>
+                                            <td>${p.type}</td>
+                                            <td>${p.centdist}</td>
+                                            <td>${p.angle}</td>
+                                        </tr>`).join("")}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                    container.appendChild(piCard);
+                }
+            });
+        }
+    });
+
+    // 🔹 Gnina 점수 테이블 불러오기
+    fetch(`{% url 'visualzing:visualzingGninaScore' %}?mainResultsDir=${encodeURIComponent(resultsDir)}`)
+    .then(res => res.json())
+    .then(data => {
+    if (data.columns && data.data) {
+        const tableContainer = document.getElementById("gnina-table-container");
+
+        // 테이블 구성
+        const table = document.createElement("table");
+        table.className = "table table-striped table-bordered";
+
+        // 헤더 생성
+        const thead = document.createElement("thead");
+        const headRow = document.createElement("tr");
+        data.columns.forEach(col => {
+        const th = document.createElement("th");
+        th.textContent = col;
+        headRow.appendChild(th);
+        });
+        thead.appendChild(headRow);
+
+        // 바디 생성
+        const tbody = document.createElement("tbody");
+        data.data.forEach(row => {
+        const tr = document.createElement("tr");
+        data.columns.forEach(col => {
+            const td = document.createElement("td");
+            td.textContent = row[col];
+            tr.appendChild(td);
+        });
+        tbody.appendChild(tr);
+        });
+
+        table.appendChild(thead);
+        table.appendChild(tbody);
+
+        // 카드 형태로 감싸기
+        const card = document.createElement("div");
+        card.className = "card shadow-sm h-100";
+        card.innerHTML = `
+        <div class="card-header bg-light">
+            <strong>📊 Gnina Scoring Result</strong>
+        </div>
+        <div class="card-body table-responsive">
+        </div>
+        `;
+        card.querySelector(".card-body").appendChild(table);
+        tableContainer.appendChild(card);
+    }
+    });
+}
+
+  function openImageModal(src) {
+    document.getElementById('modalImage').src = src;
+    const modal = new bootstrap.Modal(document.getElementById('imageModal'));
+    modal.show();
+  }
+</script>
+    
+{% endblock %}
