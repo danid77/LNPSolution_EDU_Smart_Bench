@@ -31,13 +31,10 @@
   <h2 class="text-primary mb-4">🧬 Rfdiffusion 3D Virtual Results</h2>
 
   <div class="summary-section row mb-5">
-    <div class="col-md-8 mx-auto">
+    <div class="col-md-12 mx-auto">
       <div class="card shadow-sm h-100">
         <div class="card-header bg-light">
-          <!-- 🔹 스타일 및 포즈 선택 -->
           <div class="p-1 d-flex flex-wrap gap-3 align-items-center">
-            <label class="form-label mb-0 me-2">Pose 선택:</label>
-            <select id="poseSelector" class="form-select form-select-sm w-auto" onchange="loadPose()"></select>
   
             <div class="ms-auto d-flex gap-2">
               <button class="btn btn-sm btn-outline-dark" onclick="setStyleCartoon()">White</button>
@@ -61,25 +58,27 @@
   const viewer = $3Dmol.createViewer("viewer", { backgroundColor: "white" });
 
   // 🔸 서버에서 전달된 PDB 리스트 (줄바꿈 등 escape 처리)
-  const pdbList = {{ result_pdbs|safe }};  // ← JSON 문자열이니까 그냥 JS 배열로 바로 됨!
-
-  // 🔸 드롭다운 초기화
-  const selector = document.getElementById("poseSelector");
-  pdbList.forEach((_, index) => {
-    const opt = document.createElement("option");
-    opt.value = index;
-    opt.text = `Pose ${index + 1}`;  // ← 여기!
-    selector.appendChild(opt);
-  });
+  const pdbStr = `{{ result_pdb|escapejs }}`;  // ← JSON 문자열이니까 그냥 JS 배열로 바로 됨!
 
   // 🔸 포즈 로드 함수
   function loadPose(index = null) {
-    const selectedIndex = index !== null ? index : document.getElementById("poseSelector").value;
-    const pdbStr = pdbList[selectedIndex];
-
     viewer.clear();
     viewer.addModel(pdbStr, "pdb");
-    viewer.setStyle({}, { cartoon: { color: "spectrum" } });
+    viewer.setStyle({}, {
+    cartoon: {
+      colorfunc: function(atom) {
+        const chainColors = {
+          A: "white",
+          B: "green",
+          C: "blue",
+          D: "orange",
+          E: "purple",
+          F: "red"
+        };
+        return chainColors[atom.chain] || "gray";
+      }
+    }
+  });
     viewer.zoomTo();
     viewer.render();
   }
@@ -107,10 +106,24 @@
   }
 
   function resetZoom() {
+    viewer.setStyle({}, {
+      cartoon: {
+        colorfunc: function(atom) {
+          const chainColors = {
+            A: "red",
+            B: "green",
+            C: "blue",
+            D: "orange",
+            E: "purple",
+            F: "white"
+          };
+          return chainColors[atom.chain] || "gray";
+        }
+      }
+    });
     viewer.zoomTo();
     viewer.render();
   }
-
   // 🔸 첫 번째 포즈 로딩
   loadPose(0);
 </script>

@@ -103,7 +103,7 @@
 
     window.addEventListener("message", function (e) {
         if (e.data?.type === "smiles") {
-        console.log("✅ 받은 SMILES:", e.data.value);
+        // console.log("✅ 받은 SMILES:", e.data.value);
         document.getElementById("smilesInput").value = e.data.value;
         }
     });

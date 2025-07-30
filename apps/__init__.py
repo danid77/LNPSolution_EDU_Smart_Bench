@@ -8,15 +8,15 @@ def getKey():
     return key
 
 def outputPath():
-    origin_path = Path(__file__).resolve().parent.parent.parent
+    origin_path = Path(__file__).resolve().parent.parent
     return f"{origin_path}/static/output"
 
 def outputSamplePath():
-    origin_path = Path(__file__).resolve().parent.parent.parent
+    origin_path = Path(__file__).resolve().parent.parent
     return f"{origin_path}/static/output_sample"
 
 def toolPath():
-    origin_path = Path(__file__).resolve().parent.parent.parent
+    origin_path = Path(__file__).resolve().parent.parent
     return f"{origin_path}/static/tools"
 
 def nowTime():

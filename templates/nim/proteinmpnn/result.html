@@ -81,6 +81,21 @@ font-weight: 600;
     </div>
 
   </div>
+  <div class="row mb-4">
+    <div class="col-12">
+      <div class="card shadow-sm">
+        <div class="card-header bg-light">
+          <strong>📄 Sequence comparison </strong>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+            <img id="seq-image" class="img-fluid" style="max-height: 100%; max-width: 100%;" alt="seq Image">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 
@@ -93,6 +108,12 @@ font-weight: 600;
     input: `{{ input_pdb|safe }}`,
     temp: `{{ temp_pdb|safe }}`,
   };
+
+  const params = new URLSearchParams(window.location.search);
+  const resultsDir = params.get('results_dir');
+  const relativePath = resultsDir.split("/static/")[1];
+  // 이미지 태그의 src 속성 설정
+  document.getElementById("seq-image").src = `/static/${relativePath}/seq_temp.png`;
 
   const poseColors = {
     origin: "white",

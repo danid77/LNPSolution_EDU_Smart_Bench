@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div style="margin-top: 4rem;"></div>
+    <h2 class="mb-4 text-primary">Pocket to Mol</h2>
+    <form id="generateMoleculesForm" class="needs-validation" novalidate>
+        <div class="card mb-4 shadow-sm">
+            <div class="card-header text-white" style="background-color: rgb(149, 189, 69);">
+                Input setting
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Sample select</label>
+                    <select class="form-select mb-2 text-center" id="protein_sample" onchange="setSampleValue()">
+                        <option value="">-- Select Sample Protein --</option>
+                    </select>
+                  </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">PDB ID</label>
+                    <textarea class="form-control text-center" id="pdbId" rows="1"></textarea>
+                </div>
+
+                <!-- Sampling Temperature -->
+                <div class="mb-3">
+                    <label class="form-label">Pocket Coordinates (X, Y, Z)</label>
+                    <div class="row">
+                        <div class="col">
+                            <input type="number" step="0.01" class="form-control text-center" id="x_coor" placeholder="X">
+                        </div>
+                        <div class="col">
+                            <input type="number" step="0.01" class="form-control text-center" id="y_coor" placeholder="Y">
+                        </div>
+                        <div class="col">
+                            <input type="number" step="0.01" class="form-control text-center" id="z_coor" placeholder="Z">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        <div class="text-center mb-5">
+            <button type="submit" class="btn btn-primary me-2 px-4">Generate Molecules</button>
+            <button type="reset" class="btn btn-outline-secondary px-4">Reset</button>
+        </div>
+    </form>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); z-index: 1000;">
+    <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; font-size: 20px; font-weight: bold;">
+        Loading, please wait...
+    </div>
+</div>
+
+<script>
+    // CSRF 토큰 가져오기 함수 (Django에서 사용)
+    function getCSRFToken() {
+        const csrfCookie = document.cookie
+            .split("; ")
+            .find(row => row.startsWith("csrftoken="));
+        return csrfCookie ? csrfCookie.split("=")[1] : "";
+    }
+
+    const csrfToken = getCSRFToken();
+    const samples = {{ samples_json|safe }};
+
+    document.getElementById('generateMoleculesForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const pdbId = document.getElementById('pdbId').value;
+        const data = {
+            pdbId: pdbId,
+        };
+
+        showLoading(true);
+        axios.post('{% url 'generatemol:pocket2MolProcess' %}', data, {
+            headers: {
+                "X-CSRFToken": csrfToken,
+                "Content-Type": "application/json"
+            },
+            withCredentials: true  // ✅ 이거 꼭 넣기!!
+        }).then(response => {
+            // alert("Generated successfully!");
+            showLoading(false);
+            console.log(response.data);
+            
+            // 👉 결과 페이지로 이동 시 사용 가능
+            if (response.data.status === "success") {
+                // 연산 완료 → 결과 페이지로 이동
+                const resultsDir = encodeURIComponent(response.data.results_dir);
+                location.href = `{% url 'generatemol:pocket2MolOutputPage' %}?results_dir=${resultsDir}`;
+              }
+        })
+        .catch(error => {
+            alert("Error occurred.");
+            showLoading(false);
+            console.error(error);
+        });
+    });
+
+    // DOM이 로드되면 실행
+    document.addEventListener("DOMContentLoaded", function () {
+        populateSampleOptions(samples);
+    });
+
+    // 샘플 셀렉트 박스에 옵션 추가
+    function populateSampleOptions(samples) {
+        const select = document.getElementById("protein_sample");
+
+        samples.forEach(sample => {
+            const option = document.createElement("option");
+            option.value = sample.protein;
+            option.textContent = sample.protein;
+            select.appendChild(option);
+        });
+    }
+
+    function setSampleValue() {
+        const select = document.getElementById('protein_sample');
+        const pdbId = document.getElementById('pdbId');
+        const x_coor = document.getElementById('x_coor');
+        const y_coor = document.getElementById('y_coor');
+        const z_coor = document.getElementById('z_coor');
+    
+        const selected = samples.find(s => s.protein === select.value);
+    
+        if (selected) {
+            pdbId.value = selected.pdbid;
+            x_coor.value = selected.x_coor;
+            y_coor.value = selected.y_coor;
+            z_coor.value = selected.z_coor;
+        } else {
+            pdbId.value = "";
+            x_coor.value = "";
+            y_coor.value = "";
+            z_coor.value = "";
+        }
+    }
+
+    // 로딩 메시지 표시/숨기기 함수
+    function showLoading(isLoading) {
+        const loadingOverlay = document.getElementById('loading-overlay');
+        if (!loadingOverlay) {
+            console.error("Loading overlay element not found!");
+            return;
+        }
+
+        if (isLoading) {
+            loadingOverlay.style.display = 'block'; // 오버레이 표시
+        } else {
+            loadingOverlay.style.display = 'none'; // 오버레이 숨기기
+        }
+    }
+</script>
+{% endblock %}

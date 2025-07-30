@@ -20,7 +20,12 @@
             </select>
             <input type="hidden" id="sample_name" name="sample_name">
           </div>
-  
+          
+          <div class="mb-3">
+            <label class="form-label">PDB ID</label>
+            <textarea class="form-control text-center" id="pdbId" rows="1" readonly></textarea>
+          </div>
+
           <div class="mb-3">
             <label class="form-label">Contigs</label>
             <textarea class="form-control" id="contigs" rows="2" readonly></textarea>
@@ -33,9 +38,9 @@
   
           <div class="mb-3">
             <label class="form-label" for="diffusionSteps">
-                Diffusion Steps <span id="stepsDisplay" class="text-muted"> (Steps = 50) </span>
+                Diffusion Steps <span id="stepsDisplay" class="text-muted"> (Steps = 35) </span>
             </label>
-            <input type="range" min="1" max="100" value="50" id="diffusionSteps" class="form-range">
+            <input type="range" min="1" max="50" value="35" id="diffusionSteps" class="form-range">
           </div>
   
         </div>
@@ -70,7 +75,7 @@
     document.getElementById('alphafoldForm').addEventListener('submit', function (e) {
         e.preventDefault();
     
-        const sampleName = document.getElementById('sample_name').value;
+        const sampleName = document.getElementById('protein_sample').value;
     
         const data = {
             sampleName: sampleName
@@ -90,8 +95,7 @@
     
             if (response.data.status === "done") {
                 const results_dir = encodeURIComponent(response.data.results_dir);
-                const sample_name = encodeURIComponent(response.data.sample_name);
-                location.href = `{% url 'nim:nimRfdiffusionOutputPage' %}?results_dir=${results_dir}&sample_name=${sample_name}`;
+                location.href = `{% url 'nim:nimRfdiffusionOutputPage' %}?results_dir=${results_dir}`;
             }
         }).catch(error => {
             alert("Error occurred.");
@@ -112,8 +116,8 @@
 
         samples.forEach(sample => {
             const option = document.createElement("option");
-            option.value = sample.pdbid;
-            option.textContent = sample.pdbid;
+            option.value = sample.protein;
+            option.textContent = sample.protein;
             select.appendChild(option);
         });
     }
@@ -130,17 +134,20 @@
 
     function setSampleValue() {
         const select = document.getElementById('protein_sample');
+        const pdbid = document.getElementById('pdbId');
         const contigs = document.getElementById('contigs');
         const hotspot = document.getElementById('hotspotResidues');
         const hidden = document.getElementById('sample_name');
     
-        const selected = samples.find(s => s.pdbid === select.value);
+        const selected = samples.find(s => s.protein === select.value);
     
         if (selected) {
+          pdbid.value = selected.pdbid;
           contigs.value = selected.contigs;
           hotspot.value = selected.hotspot_residues.join(', ');
           hidden.value = selected.pdbid;
         } else {
+          pdbid.value = "";
           contigs.value = "";
           hotspot.value = "";
           hidden.value = "";

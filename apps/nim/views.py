@@ -404,10 +404,16 @@ def nimAlphafoldMultiOutputPage(request):
 
 def nimRfdiffusionInputPage(request):
     # 샘플 딕셔너리로 구성 
+    # samples = [
+    #     {"pdbid": "1R42", "contigs": "A114-353/0 50-100", "hotspot_residues" : ["A119", "A123", "A233", "A234", "A235"]},
+    #     {"pdbid": "5TPN", "contigs": "L1-25/0 70-100", "hotspot_residues" : ["L14", "L15", "L17", "L18"]},
+    #     {"pdbid": "6VXX", "contigs": "A353-410/0 100-200", "hotspot_residues" : ["A360", "A361", "A362", "A366"]},
+    # ]
+    
     samples = [
-        {"pdbid": "1R42", "contigs": "A114-353/0 50-100", "hotspot_residues" : ["A119", "A123", "A233", "A234", "A235"]},
-        {"pdbid": "5TPN", "contigs": "L1-25/0 70-100", "hotspot_residues" : ["L14", "L15", "L17", "L18"]},
-        {"pdbid": "6VXX", "contigs": "A353-410/0 100-200", "hotspot_residues" : ["A360", "A361", "A362", "A366"]},
+        {"protein" : "TNIK", "pdbid": "2W3L", "contigs": "A9-32/0 49-165", "hotspot_residues" : ["A55", "A56", "A57", "A58", "A59"]},
+        {"protein" : "BCL2", "pdbid": "2X7F", "contigs": "A15-60/0 100-313", "hotspot_residues" : ["A90", "A91", "A92", "A93"]},
+        {"protein" : "HER2", "pdbid": "8VB5", "contigs": "A706-780/0 820-990", "hotspot_residues" : ["A800", "A801", "A802", "A803", "A804"]},
     ]
 
     return render(request, 'nim/rfd/input.html', {
@@ -417,32 +423,37 @@ def nimRfdiffusionInputPage(request):
 def nimRfdiffusionProcess(request):
     if request.method == "POST":    
         try:
-            results_dir = f"{outputPath()}/nim/rfd"
+            sample_dir = f"{outputSamplePath()}/nim/rfd"
             
             data = json.loads(request.body)
             sample_name = data.get('sampleName', '')
             time.sleep(1)  # 5초 동안 멈춤     
             
-            return JsonResponse({"status": "done", "results_dir" : results_dir, "sample_name" : sample_name})  # ← 클라이언트에 저장 완료만 알림
+            results_dir = f"{sample_dir}/{sample_name}"
+            
+            return JsonResponse({"status": "done", "results_dir" : results_dir})  # ← 클라이언트에 저장 완료만 알림
         except Exception as e:
             print("에러 발생:", e)
             return JsonResponse({"error": str(e)}, status=500)
         
 def nimRfdiffusionOutputPage(request):
-    sample_name = request.GET.get('sample_name')
     results_dir = request.GET.get('results_dir')
     
-    print("nimRfdiffusionOutputPage : ", sample_name)
+    # print("nimRfdiffusionOutputPage : ", sample_name)
     # rf디퓨션 : 디퓨션 스텝 50으로 돌린 결과를 불러옴
-    sample_pdb_path = os.path.join(results_dir, f"rf_{sample_name}.pdb")
+    sample_pdb_path = os.path.join(results_dir, "rfd.pdb")
 
+    print(sample_pdb_path)
+    
     pdb_content = ""
     if os.path.exists(sample_pdb_path):
         with open(sample_pdb_path, 'r') as f:
             pdb_content = f.read()
 
+    print("pdb_content : ", pdb_content[:100])
+    
     return render(request, 'nim/rfd/result.html', {
-        "result_pdbs": json.dumps([pdb_content])
+        "result_pdb": pdb_content
     })
     
 
@@ -467,6 +478,8 @@ def nimDiffdockProcess(request):
             data = json.loads(request.body)
             sample_name = data.get('sampleName', '')
 
+            print(sample_name)
+            
             results_dir = os.path.join(sample_dir, sample_name)
             time.sleep(1)  # 5초 동안 멈춤
             return JsonResponse({

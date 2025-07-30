@@ -38,7 +38,7 @@
         }
 
         // ✅ SMILES 추출 버튼 (오른쪽 끝)
-        const sendButton = makeButton("✅ SMILES 추출 후 전송", "#4caf50");
+        const sendButton = makeButton("✅ SMILES 추출", "#4caf50");
         sendButton.style.right = "60px";
 
         sendButton.onclick = async () => {
@@ -53,7 +53,7 @@
 
         // 🔁 리셋 버튼 (조금 왼쪽으로 띄움)
         const resetButton = makeButton("🔄 리셋", "#f44336");
-        resetButton.style.right = "240px";  // ← 버튼 간격 벌리기
+        resetButton.style.right = "200px";  // ← 버튼 간격 벌리기
 
         resetButton.onclick = async () => {
             if (!window.ketcher) {

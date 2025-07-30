@@ -57,7 +57,7 @@ def singleModule(request):
             "title": "Pocket-based compound generation",
             "icon": "img/nvidia_molmim.jpg",
             "color": "#198754",
-            "url": reverse('generatemol:pocket2MolInputPage'),
+            "url": reverse('lnp:test'),
             "delay": "0.7s"
         },
         {
@@ -67,13 +67,27 @@ def singleModule(request):
             "url": reverse('nim:nimRfdiffusionInputPage'),
             "delay": "0.8s"
         },
-        {
-            "title": "Data Analysis",
-            "icon": "img/single/interaction_3.png",
-            "color": "#198754",
-            "url": reverse('lnp:interactionHome'),
-            "delay": "0.8s"
-        },
+        # {
+        #     "title": "Peptide discovery",
+        #     "icon": "img/single/peptide2.png",
+        #     "color": "#198754",
+        #     "url": reverse('lnp:peptideHome'),
+        #     "delay": "0.1s"
+        # },
+        # {
+        #     "title": "Interaction Analysis & Visualization",
+        #     "icon": "img/single/interaction.png",
+        #     "color": "#198754",
+        #     "url": reverse('lnp:interactionHome'),
+        #     "delay": "0.1s"
+        # },
+        # {
+        #     "title": "Dimensionality Reduction & Visualization",
+        #     "icon": "img/single/umap_img.png",
+        #     "color": "#198754",
+        #     "url": reverse('lnp:dimensionalityHome'),
+        #     "delay": "0.1s"
+        # },
     ]
     return render(request, 'lnp/single_module.html', {'cards': cards})
 
@@ -90,7 +104,7 @@ def proteinMonomerHome(request):
             "delay": "0.1s"
         },
         {
-            "title": "Openfold2",
+            "title": "Openfold",
             "icon": "img/nvidia_openfold2.webp",
             "color": "#198754",
             "url": reverse('nim:nimOpenfoldInputPageSample'),
@@ -103,6 +117,13 @@ def proteinMonomerHome(request):
             "url": reverse('nim:nimEsmfoldInputPage'),
             "delay": "0.7s"
         },
+        # {
+        #     "title": "Boltz",
+        #     "icon": "img/single_module/boltz.png",
+        #     "color": "#4b9153",
+        #     "url": reverse('protein:boltzInputPage'),
+        #     "delay": "0.9s"
+        # },
         {
             "title": "Boltz2",
             "icon": "img/single_module/boltz.png",
@@ -110,6 +131,13 @@ def proteinMonomerHome(request):
             "url": reverse('protein:boltz2InputPage'),
             "delay": "0.9s"
         },
+        # {
+        #     "title": "Chai - 1",
+        #     "icon": "img/single_module/chai.png",
+        #     "color": "#4b9153",
+        #     "url": reverse('protein:chaiInputPage'),
+        #     "delay": "1.1s"
+        # },
     ]
     return render(request, 'lnp/category.html', {'cards': cards})
 
@@ -134,13 +162,13 @@ def proteinMultimerHome(request):
 
 def moleculeHome(request):
     cards = [
-        # {
-        #     "title": "Chem draw : ketcher",
-        #     "icon": "img/nvidia_molmim.jpg",
-        #     "color": "#198754",
-        #     "url": reverse('generatemol:chemDrawInputPage'),
-        #     "delay": "0.1s"
-        # },
+        {
+            "title": "Chem draw : ketcher",
+            "icon": "img/nvidia_molmim.jpg",
+            "color": "#198754",
+            "url": reverse('generatemol:chemDrawInputPage'),
+            "delay": "0.1s"
+        },
         {
             "title": "Molmin",
             "icon": "img/nvidia_molmim.jpg",
@@ -162,6 +190,13 @@ def moleculeHome(request):
             "url": reverse('generatemol:molsparkInputPage'),
             "delay": "0.5s"
         },
+        # {
+        #     "title": "MolSpark",
+        #     "icon": "img/single/molecule.png",
+        #     "color": "#dc3545",
+        #     "url": "http://lnpsolution.iptime.org:8601/",
+        #     "delay": "0.5s"
+        # },
     ]
     return render(request, 'lnp/category.html', {'cards': cards})
 
@@ -174,13 +209,34 @@ def complexHome(request):
             "url": reverse('nim:nimDiffdockInputPage'),
             "delay": "0.1s"
         },
+        # {
+        #     "title": "Boltz",
+        #     "icon": "img/single_module/boltz_complex.png",
+        #     "color": "#4b9153",
+        #     "url": reverse('protein:boltzComplexInputPage'),
+        #     "delay": "0.3s"
+        # },
         {
-            "title": "Boltz2-Complex",
+            "title": "Boltz2",
             "icon": "img/single_module/boltz_complex.png",
             "color": "#4b9153",
             "url": reverse('protein:boltz2ComplexInputPage'),
             "delay": "0.3s"
         },
+        # {
+        #     "title": "Chai - 1",
+        #     "icon": "img/single_module/chai_complex.png",
+        #     "color": "#4b9153",
+        #     "url": reverse('protein:chaiComplexInputPage'),
+        #     "delay": "0.5s"
+        # },
+        # {
+        #     "title": "GNINA",
+        #     "icon": "img/nvidia_molmim.jpg",
+        #     "color": "#198754",
+        #     "url": reverse('lnp:test'),
+        #     "delay": "0.7s"
+        # },
     ]
     return render(request, 'lnp/category.html', {'cards': cards})
 
@@ -200,6 +256,13 @@ def peptideHome(request):
             "url": reverse('nim:nimRfdiffusionInputPage'),
             "delay": "0.3s"
         },
+        # {
+        #     "title": "HydraAMP",
+        #     "icon": "img/single/peptide2.png",
+        #     "color": "#4b9153",
+        #     "url": "http://lnpsolution.iptime.org:8610/",
+        #     "delay": "0.5s"
+        # },
     ]
     return render(request, 'lnp/category.html', {'cards': cards})
 
@@ -237,13 +300,6 @@ def interactionHome(request):
             "color": "#0d6efd",
             "url": reverse('plip:plipInputPage'),
             "delay": "0.3s"
-        },
-        {
-            "title": "Molecular Data Visualization",
-            "icon": "img/single/umap_img.png",
-            "color": "#4b9153",
-            "url": "http://lnpsolution.iptime.org:8502/",
-            "delay": "0.1s"
         },
     ]
     return render(request, 'lnp/category.html', {'cards': cards})

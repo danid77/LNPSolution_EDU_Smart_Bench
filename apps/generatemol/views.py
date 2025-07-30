@@ -113,3 +113,39 @@ def chemDrawSmilesTo3d(request):
         return JsonResponse({"status": "success", "mol_block": mol_block})
     except Exception as e:
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
+    
+def pocket2MolInputPage(request):
+    samples = [
+        {"protein" : "TNIK", "pdbid": "2X7F", "x_coor" : "27.31", "y_coor" : "-5.47", "z_coor" : "57.1"},
+        {"protein" : "HER2", "pdbid": "8VB5", "x_coor" : "-1.13", "y_coor" : "6.73", "z_coor" : "-18.11"},
+        {"protein" : "BCL2", "pdbid": "2W3L", "x_coor" : "39.81", "y_coor" : "26.94", "z_coor" : "-12.41"},
+    ]
+    return render(request, 'pocket2mol/input.html', {
+        'samples_json': json.dumps(samples)
+    })
+    
+def pocket2MolProcess(request):
+    try:
+        sample_dir = f"{outputSamplePath()}/pocket2mol"
+        
+        # JSON 데이터 파싱
+        data = json.loads(request.body)
+        sample_name = data.get("pdbId")
+        
+        # print(sample_name)
+        
+        results_dir = f"{sample_dir}/{sample_name}"
+        
+        return JsonResponse({"status": "success", "results_dir": results_dir})
+    except Exception as e:
+        return JsonResponse({"status": "error", "message": str(e)})
+
+def pocket2MolOutputPage(request):
+    results_dir = request.GET.get('results_dir')
+    if not results_dir or not os.path.isdir(results_dir):
+        return JsonResponse({'error': 'Invalid results_dir'}, status=400)
+
+    result_csv_file = pd.read_csv(f"{results_dir}/Rdkit_result.csv")
+    
+    return render(request, 'pocket2mol/result.html', {"smiles" : result_csv_file['SMILES'].tolist(), 
+                                                      "cal_data" : result_csv_file.replace({np.nan: "Null"}).to_dict(orient="records")})
